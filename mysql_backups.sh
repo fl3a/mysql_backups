@@ -46,7 +46,7 @@
 
 # Variables
 BASENAME=`basename $0`
-BACKUP_DIR="/private-backup/beta/mysql_backups"
+BACKUP_DIR="/var/mysql_backups"
 DATESTAMP=`date +%FT%R`
 BACKUP_PATH="${BACKUP_DIR}/${DATESTAMP}"
 MYSQL_BIN_DIR='/var/lib/mysql/'
@@ -108,16 +108,10 @@ mysql_backup_help () {
 #                 3 if /root/.my.cnf does not exist
 #===============================================================================
 mysql_backup_checks () {
-  # checking uid
-  if [ `id -u` -ne 0 ] ; then
-    echo "You are not root, cannot execute `basename $0.`" 1>&2
-    return 2
-  else
-    # checking /root/.my.cnf
-    if [ ! -f "/root/.my.cnf" ] ; then
-      echo "Can not find required /root/.my.cnf" 1>&2
-      return 3
-    fi
+  # checking /root/.my.cnf
+  if [ ! -f "${HOME}/.my.cnf" ] ; then
+    echo "Can not find required .my.cnf in $HOME" 1>&2
+    return 3
   fi
   # checking parameter
   if [ "${#}" -ne 1 ] ; then    
@@ -199,7 +193,13 @@ mysql_backup_database ()  {
   DIR="${BACKUP_PATH}/databases"
   FILE="${DIR}/${DATABASE}.sql"
   mkdir -p "${DIR}" || return 6
-  mysqldump ${DATABASE} > "${FILE}" || return 7
+  # @see http://forums.mysql.com/read.php?10,108835,108835
+  # ERROR: Access denied for user 'root'@'localhost' to database 'information_schema' when using LOCK TABLES
+  if [ ${DATABASE} = 'information_schema' ] ; then
+    mysqldump --skip-lock-tables ${DATABASE} > "${FILE}" || return 7
+  else 
+    mysqldump ${DATABASE} > "${FILE}" || return 7
+  fi 
   [ -f "${FILE}.bz2" ] && rm "${FILE}.bz2"
   bzip2 "${FILE}"
   return 0
