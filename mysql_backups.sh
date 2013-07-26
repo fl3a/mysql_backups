@@ -46,7 +46,7 @@
 
 # Variables
 BASENAME=`basename $0`
-BACKUP_DIR="/var/mysql_backups"
+BACKUP_DIR="/var/backups/mysql"
 DATESTAMP=`date +%FT%R`
 BACKUP_PATH="${BACKUP_DIR}/${DATESTAMP}"
 MYSQL_BIN_DIR='/var/lib/mysql/'
@@ -163,7 +163,6 @@ mysql_backup_get_tables ()  {
 #                 Result file pattern: ${DATABASE}.${TABLE}.sql.bz2
 #    PARAMETERS:  $DATABASE
 #       RETURNS:  0 if successfull,
-#                 6 if mkdir failed or 7 if mysqldump failed
 #===============================================================================
 mysql_backup_tables ()  {
   for TABLE in `mysql_backup_get_tables $1` ; do
@@ -171,7 +170,7 @@ mysql_backup_tables ()  {
     FILE="${DIR}/${DATABASE}.${TABLE}.sql"
     if [ "${TABLE}" != Tables_in_${DATABASE} ] ; then
       mkdir -p $DIR || return 6
-      $mysqldump $DATABASE $TABLE > $FILE || return 7
+      $mysqldump $DATABASE $TABLE > $FILE 
       [ -f "${FILE}.bz2" ] && rm "${FILE}.bz2"
       $bzip2 $FILE
     fi
@@ -186,7 +185,6 @@ mysql_backup_tables ()  {
 #                 Result file pattern: ${DATABASE}.sql.bz2  
 #    PARAMETERS:  $DATABASE
 #       RETURNS:  0 if successfull,
-#                 6 if mkdir failed or 7 if mysqldump failed
 #===============================================================================
 mysql_backup_database ()  {
   DATABASE=$1
@@ -196,9 +194,9 @@ mysql_backup_database ()  {
   # @see http://forums.mysql.com/read.php?10,108835,108835
   # ERROR: Access denied for user 'root'@'localhost' to database 'information_schema' when using LOCK TABLES
   if [ ${DATABASE} = 'information_schema' ] ; then
-    mysqldump --skip-lock-tables ${DATABASE} > "${FILE}" || return 7
+    mysqldump --skip-lock-tables ${DATABASE} > "${FILE}"
   else 
-    mysqldump ${DATABASE} > "${FILE}" || return 7
+    mysqldump ${DATABASE} > "${FILE}" 
   fi 
   [ -f "${FILE}.bz2" ] && rm "${FILE}.bz2"
   bzip2 "${FILE}"
@@ -287,7 +285,7 @@ main ()  {
     fi
     mysql_backup_symlink || return $?
   # Purging old dumps
-  elif ["${1}" = "--purge" ] ; then
+  elif [ "${1}" = "--purge" ] ; then
     mysql_backup_purge || return $?
   fi
   return 0
